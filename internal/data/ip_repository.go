@@ -86,10 +86,18 @@ func (r *ipRepository) GetOldestIP(ctx context.Context) (*domain.IP, error) {
 }
 
 func (r *ipRepository) ListByGroupID(ctx context.Context, groupID int) ([]*domain.IP, error) {
+	var group GroupModel
+	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).First(&group).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []*domain.IP{}, nil
+		}
+		return nil, fmt.Errorf("failed to find group: %w", err)
+	}
+
 	var models []IPModel
 	if err := r.db.WithContext(ctx).
 		Joins("JOIN sender_score_group_ips ON sender_score_ips.id = sender_score_group_ips.ip_id").
-		Where("sender_score_group_ips.group_id = ?", groupID).
+		Where("sender_score_group_ips.group_id = ?", group.ID).
 		Find(&models).Error; err != nil {
 		return nil, fmt.Errorf("failed to list IPs by group: %w", err)
 	}
@@ -130,9 +138,14 @@ func (r *ipRepository) Delete(ctx context.Context, id uint) error {
 }
 
 func (r *ipRepository) AddToGroup(ctx context.Context, ipID uint, groupID int) error {
+	var group GroupModel
+	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).First(&group).Error; err != nil {
+		return fmt.Errorf("failed to find group: %w", err)
+	}
+
 	groupIP := GroupIPModel{
-		GroupID: groupID,
 		IPID:    ipID,
+		GroupID: group.ID,
 	}
 
 	if err := r.db.WithContext(ctx).Create(&groupIP).Error; err != nil {
@@ -144,8 +157,13 @@ func (r *ipRepository) AddToGroup(ctx context.Context, ipID uint, groupID int) e
 }
 
 func (r *ipRepository) RemoveFromGroup(ctx context.Context, ipID uint, groupID int) error {
+	var group GroupModel
+	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).First(&group).Error; err != nil {
+		return fmt.Errorf("failed to find group: %w", err)
+	}
+
 	if err := r.db.WithContext(ctx).
-		Where("ip_id = ? AND group_id = ?", ipID, groupID).
+		Where("ip_id = ? AND group_id = ?", ipID, group.ID).
 		Delete(&GroupIPModel{}).Error; err != nil {
 		return fmt.Errorf("failed to remove IP from group: %w", err)
 	}
@@ -153,10 +171,15 @@ func (r *ipRepository) RemoveFromGroup(ctx context.Context, ipID uint, groupID i
 }
 
 func (r *ipRepository) IsIPInOtherGroups(ctx context.Context, ipID uint, excludeGroupID int) (bool, error) {
+	var group GroupModel
+	if err := r.db.WithContext(ctx).Where("group_id = ?", excludeGroupID).First(&group).Error; err != nil {
+		return false, fmt.Errorf("failed to find group: %w", err)
+	}
+
 	var count int64
 	if err := r.db.WithContext(ctx).
 		Table("sender_score_group_ips").
-		Where("ip_id = ? AND group_id != ?", ipID, excludeGroupID).
+		Where("ip_id = ? AND group_id != ?", ipID, group.ID).
 		Count(&count).Error; err != nil {
 		return false, fmt.Errorf("failed to check IP in other groups: %w", err)
 	}
@@ -164,12 +187,23 @@ func (r *ipRepository) IsIPInOtherGroups(ctx context.Context, ipID uint, exclude
 }
 
 func (r *ipRepository) getGroupIDsForIP(ctx context.Context, ipID uint) ([]int, error) {
-	var groupIDs []int
+	var internalIDs []uint
 	if err := r.db.WithContext(ctx).
 		Table("sender_score_group_ips").
 		Where("ip_id = ?", ipID).
-		Pluck("group_id", &groupIDs).Error; err != nil {
+		Pluck("group_id", &internalIDs).Error; err != nil {
 		return nil, err
 	}
+
+	var groupIDs []int
+	if len(internalIDs) > 0 {
+		if err := r.db.WithContext(ctx).
+			Table("sender_score_groups").
+			Where("id IN ?", internalIDs).
+			Pluck("group_id", &groupIDs).Error; err != nil {
+			return nil, err
+		}
+	}
+
 	return groupIDs, nil
 }

@@ -56,10 +56,10 @@ func (uc *ipUseCase) AddIP(ctx context.Context, dto AddIPDTO) (*IPDTO, error) {
 
 	ip := &domain.IP{
 		IP:         dto.IP,
-		Score:      dto.Score,
-		SpamTrap:   dto.SpamTrap,
-		Blocklists: dto.Blocklists,
-		Complaints: dto.Complaints,
+		Score:      0,
+		SpamTrap:   0,
+		Blocklists: "",
+		Complaints: "",
 		UpdatedAt:  time.Now(),
 	}
 
@@ -103,10 +103,10 @@ func (uc *ipUseCase) AddIPs(ctx context.Context, dtos []AddIPDTO) (*BatchIPResul
 
 			ip := &domain.IP{
 				IP:         dto.IP,
-				Score:      dto.Score,
-				SpamTrap:   dto.SpamTrap,
-				Blocklists: dto.Blocklists,
-				Complaints: dto.Complaints,
+				Score:      0,
+				SpamTrap:   0,
+				Blocklists: "",
+				Complaints: "",
 				UpdatedAt:  time.Now(),
 			}
 

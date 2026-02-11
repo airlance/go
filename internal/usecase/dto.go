@@ -25,13 +25,9 @@ type IPDTO struct {
 }
 
 type AddIPDTO struct {
-	GroupID    int
-	GroupName  string
-	IP         string
-	Score      int
-	SpamTrap   int
-	Blocklists string
-	Complaints string
+	GroupID   int
+	GroupName string
+	IP        string
 }
 
 type HistoryEntryDTO struct {

@@ -84,12 +84,17 @@ func (r *groupRepository) Delete(ctx context.Context, groupID int) error {
 }
 
 func (r *groupRepository) UpdateCounters(ctx context.Context, groupID int) error {
+	var group GroupModel
+	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).First(&group).Error; err != nil {
+		return fmt.Errorf("failed to find group: %w", err)
+	}
+
 	var ipsCount int64
 	var totalSpamTrap int64
 
 	if err := r.db.WithContext(ctx).
 		Table("sender_score_group_ips").
-		Where("group_id = ?", groupID).
+		Where("group_id = ?", group.ID).
 		Count(&ipsCount).Error; err != nil {
 		return fmt.Errorf("failed to count IPs: %w", err)
 	}
@@ -97,13 +102,13 @@ func (r *groupRepository) UpdateCounters(ctx context.Context, groupID int) error
 	if err := r.db.WithContext(ctx).
 		Table("sender_score_ips").
 		Joins("JOIN sender_score_group_ips ON sender_score_ips.id = sender_score_group_ips.ip_id").
-		Where("sender_score_group_ips.group_id = ?", groupID).
+		Where("sender_score_group_ips.group_id = ?", group.ID).
 		Select("COALESCE(SUM(spam_trap), 0)").
 		Scan(&totalSpamTrap).Error; err != nil {
 		return fmt.Errorf("failed to sum spam traps: %w", err)
 	}
 
-	if err := r.db.WithContext(ctx).Model(&GroupModel{}).Where("group_id = ?", groupID).Updates(map[string]interface{}{
+	if err := r.db.WithContext(ctx).Model(&GroupModel{}).Where("id = ?", group.ID).Updates(map[string]interface{}{
 		"ips_count":       ipsCount,
 		"spam_trap_count": totalSpamTrap,
 	}).Error; err != nil {
@@ -114,12 +119,23 @@ func (r *groupRepository) UpdateCounters(ctx context.Context, groupID int) error
 }
 
 func (r *groupRepository) GetGroupIDsByIP(ctx context.Context, ipID uint) ([]int, error) {
-	var groupIDs []int
+	var internalIDs []uint
 	if err := r.db.WithContext(ctx).
 		Table("sender_score_group_ips").
 		Where("ip_id = ?", ipID).
-		Pluck("group_id", &groupIDs).Error; err != nil {
-		return nil, fmt.Errorf("failed to get group IDs by IP: %w", err)
+		Pluck("group_id", &internalIDs).Error; err != nil {
+		return nil, fmt.Errorf("failed to get internal group IDs by IP: %w", err)
 	}
+
+	var groupIDs []int
+	if len(internalIDs) > 0 {
+		if err := r.db.WithContext(ctx).
+			Table("sender_score_groups").
+			Where("id IN ?", internalIDs).
+			Pluck("group_id", &groupIDs).Error; err != nil {
+			return nil, fmt.Errorf("failed to get user group IDs: %w", err)
+		}
+	}
+
 	return groupIDs, nil
 }

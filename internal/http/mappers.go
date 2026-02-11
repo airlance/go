@@ -13,13 +13,9 @@ func toCreateGroupDTO(req CreateGroupRequest) usecase.CreateGroupDTO {
 
 func toAddIPDTO(req AddIPRequest) usecase.AddIPDTO {
 	return usecase.AddIPDTO{
-		GroupID:    req.GroupID,
-		GroupName:  req.GroupName,
-		IP:         req.IP,
-		Score:      req.Score,
-		SpamTrap:   req.SpamTrap,
-		Blocklists: req.Blocklists,
-		Complaints: req.Complaints,
+		GroupID:   req.GroupID,
+		GroupName: req.GroupName,
+		IP:        req.IP,
 	}
 }
 

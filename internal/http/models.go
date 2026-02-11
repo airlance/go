@@ -6,13 +6,9 @@ type CreateGroupRequest struct {
 }
 
 type AddIPRequest struct {
-	GroupID    int    `json:"group_id" binding:"required"`
-	GroupName  string `json:"group_name"`
-	IP         string `json:"ip" binding:"required"`
-	Score      int    `json:"score"`
-	SpamTrap   int    `json:"spam_trap"`
-	Blocklists string `json:"blocklists"`
-	Complaints string `json:"complaints"`
+	GroupID   int    `json:"group_id" binding:"required"`
+	GroupName string `json:"group_name" binding:"required"`
+	IP        string `json:"ip" binding:"required"`
 }
 
 type AddIPsRequest struct {

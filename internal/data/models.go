@@ -23,7 +23,7 @@ type IPModel struct {
 	Complaints string    `gorm:"type:varchar(50);comment:Complaints"`
 	UpdatedAt  time.Time `gorm:"index:idx_ips_updated;comment:Updated"`
 
-	Groups []GroupModel `gorm:"many2many:sender_score_group_ips;"`
+	Groups []GroupModel `gorm:"many2many:sender_score_group_ips;joinForeignKey:IPID;joinReferences:GroupID;"`
 }
 
 func (IPModel) TableName() string {
@@ -31,11 +31,11 @@ func (IPModel) TableName() string {
 }
 
 type GroupIPModel struct {
-	GroupID int  `gorm:"primaryKey;index;comment:Group ID"`
 	IPID    uint `gorm:"primaryKey;index;comment:IP ID"`
+	GroupID uint `gorm:"primaryKey;index;comment:Group Internal ID"`
 
-	Group GroupModel `gorm:"foreignKey:GroupID;references:GroupID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	IP    IPModel    `gorm:"foreignKey:IPID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Group GroupModel `gorm:"foreignKey:GroupID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (GroupIPModel) TableName() string {
