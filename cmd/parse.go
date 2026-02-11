@@ -131,25 +131,3 @@ var parseCmd = cobra.Command{
 		fmt.Println(ui)
 	},
 }
-
-func convertToHistoryDTO(result *infrastructure.Result) []usecase.HistoryEntryDTO {
-	volumes := make(map[string]int)
-	for _, v := range result.SSVolume {
-		volumes[v.Timestamp] = v.Value
-	}
-
-	history := make([]usecase.HistoryEntryDTO, 0, len(result.SSTrend))
-	for _, p := range result.SSTrend {
-		ms, _ := strconv.ParseInt(p.Timestamp, 10, 64)
-		tm := time.Unix(0, ms*int64(time.Millisecond))
-
-		history = append(history, usecase.HistoryEntryDTO{
-			Date:     tm.Format("02.01.2006"),
-			Score:    p.Value,
-			Volume:   volumes[p.Timestamp],
-			SpamTrap: result.SpamTrap,
-		})
-	}
-
-	return history
-}
