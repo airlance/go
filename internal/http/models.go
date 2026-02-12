@@ -7,8 +7,8 @@ type CreateGroupRequest struct {
 
 type AddIPRequest struct {
 	GroupID   int    `json:"group_id" binding:"required"`
-	GroupName string `json:"group_name" binding:"required"`
-	IP        string `json:"ip" binding:"required"`
+	GroupName string `json:"group_name"`
+	IP        string `json:"ip"`
 }
 
 type AddIPsRequest struct {

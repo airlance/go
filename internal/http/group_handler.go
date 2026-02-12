@@ -222,10 +222,53 @@ func (h *GroupHandler) AddIP(c *gin.Context) {
 		return
 	}
 
+	if req.IP == "" && req.GroupName == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "invalid_request",
+			Message: "Either 'ip' or 'group_name' must be provided",
+		})
+		return
+	}
+
+	if req.IP == "" && req.GroupName != "" {
+		if err := h.groupUC.UpdateGroupName(c.Request.Context(), req.GroupID, req.GroupName); err != nil {
+			if err == domain.ErrGroupNotFound {
+				c.JSON(http.StatusNotFound, ErrorResponse{
+					Error:   "not_found",
+					Message: "Group not found",
+				})
+				return
+			}
+			logrus.WithError(err).Error("Failed to update group name")
+			c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error:   "internal_error",
+				Message: "Failed to update group name",
+			})
+			return
+		}
+
+		group, err := h.groupUC.GetGroupByGroupID(c.Request.Context(), req.GroupID, false)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to get updated group")
+			c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error:   "internal_error",
+				Message: "Failed to retrieve updated group",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, toGroupResponse(group))
+		return
+	}
+
 	dto := toAddIPDTO(req)
 	ip, err := h.ipUC.AddIP(c.Request.Context(), dto)
 	if err != nil {
-		logrus.WithError(err).Error("Failed to add IP")
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"group_id":   req.GroupID,
+			"group_name": req.GroupName,
+			"ip":         req.IP,
+		}).Error("Failed to add IP")
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
 			Message: "Failed to add IP address",

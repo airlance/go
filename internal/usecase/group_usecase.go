@@ -13,6 +13,7 @@ type GroupUseCase interface {
 	GetGroupByGroupID(ctx context.Context, groupID int, withIPs bool) (*GroupDTO, error)
 	ListGroups(ctx context.Context, pagination PaginationDTO, withIPs bool) ([]*GroupDTO, int64, error)
 	UpdateCounters(ctx context.Context, groupID int) error
+	UpdateGroupName(ctx context.Context, groupID int, newName string) error
 	DeleteGroup(ctx context.Context, groupID int) error
 }
 
@@ -125,6 +126,20 @@ func (uc *groupUseCase) ListGroups(ctx context.Context, pagination PaginationDTO
 
 func (uc *groupUseCase) UpdateCounters(ctx context.Context, groupID int) error {
 	return uc.groupRepo.UpdateCounters(ctx, groupID)
+}
+
+func (uc *groupUseCase) UpdateGroupName(ctx context.Context, groupID int, newName string) error {
+	group, err := uc.groupRepo.GetByGroupID(ctx, groupID)
+	if err != nil {
+		return err
+	}
+
+	group.GroupName = newName
+	if err := uc.groupRepo.Update(ctx, group); err != nil {
+		return fmt.Errorf("failed to update group name: %w", err)
+	}
+
+	return nil
 }
 
 func (uc *groupUseCase) DeleteGroup(ctx context.Context, groupID int) error {
